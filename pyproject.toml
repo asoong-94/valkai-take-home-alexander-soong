@@ -10,10 +10,13 @@ dependencies = [
     "langchain-anthropic",
     "langchain-google-genai",
     "python-dotenv",
+    "fastapi",
+    "uvicorn[standard]",
 ]
 
 [project.scripts]
 chat = "agent.cli:main"
+serve = "agent.server:main"
 
 [dependency-groups]
 dev = [

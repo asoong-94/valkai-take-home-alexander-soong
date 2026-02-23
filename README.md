@@ -1,6 +1,36 @@
-# take-home
+# simple-agent
 
-Barebones CLI chat agent built on [LangChain Deep Agents](https://github.com/langchain-ai/deepagents). Supports OpenAI, Anthropic, and Google models out of the box. Designed as a minimal starting point to build on.
+A minimal LLM agent built on [LangChain Deep Agents](https://github.com/langchain-ai/deepagents). Supports OpenAI, Anthropic, and Google models out of the box. Two ways to run it — pick one:
+
+- [CLI guide](docs/cli.md) — interactive terminal chat
+- [Fullstack guide](docs/fullstack.md) — FastAPI server + React frontend
+
+---
+
+## Core agent
+
+The agent lives in `src/agent/core.py` and exposes a single factory:
+
+```python
+from agent.core import make_agent
+
+agent = make_agent(
+    model_str="anthropic:claude-haiku-4-5-20251001",  # provider:model
+    system_prompt=None,                                # optional override
+)
+```
+
+It wraps LangChain's `init_chat_model` + `create_deep_agent` and returns a compiled LangGraph agent that supports `.invoke()`, `.stream()`, and `.astream()`.
+
+## Supported providers
+
+| Provider  | Model string example                            | Required env var    |
+|-----------|-------------------------------------------------|---------------------|
+| Anthropic | `anthropic:claude-haiku-4-5-20251001` (default) | `ANTHROPIC_API_KEY` |
+| OpenAI    | `openai:gpt-4o`                                 | `OPENAI_API_KEY`    |
+| Google    | `google_genai:gemini-2.5-flash`                 | `GOOGLE_API_KEY`    |
+
+Any model supported by LangChain's [`init_chat_model`](https://python.langchain.com/docs/how_to/chat_models_universal_init/) works — just pass the `provider:model` string.
 
 ## Prerequisites
 
@@ -8,7 +38,7 @@ Barebones CLI chat agent built on [LangChain Deep Agents](https://github.com/lan
 - [uv](https://docs.astral.sh/uv/) package manager
 - At least one LLM provider API key
 
-## Quick start
+## Initial setup
 
 ```bash
 git clone https://github.com/valkai-tech/take-home.git
@@ -18,24 +48,6 @@ cp .env.example .env
 # Fill in your API key(s) in .env
 ```
 
-## Usage
-
-```bash
-# Default model (Anthropic Claude Haiku — cheapest)
-uv run chat
-
-# OpenAI
-uv run chat --model openai:gpt-4o
-
-# Google
-uv run chat --model google_genai:gemini-2.5-flash
-
-# Custom system prompt
-uv run chat --system "You are a helpful coding assistant."
-```
-
-Type `quit` or `exit` to end the session.
-
 ## Running evals
 
 ```bash
@@ -44,26 +56,22 @@ uv run pytest evals/ -v
 
 Evals make real LLM calls (not mocked) to verify provider integration end-to-end.
 
-## Supported providers
-
-| Provider  | Model string example                          | Required env var       |
-|-----------|-----------------------------------------------|------------------------|
-| Anthropic | `anthropic:claude-haiku-4-5-20251001` (default) | `ANTHROPIC_API_KEY`    |
-| OpenAI    | `openai:gpt-4o`                               | `OPENAI_API_KEY`       |
-| Google    | `google_genai:gemini-2.5-flash`               | `GOOGLE_API_KEY`       |
-
-Any model supported by LangChain's [`init_chat_model`](https://docs.langchain.com/oss/python/langchain/models) works — just pass the `provider:model` string.
-
 ## Project structure
 
 ```
-take-home/
-├── pyproject.toml          # uv project config, dependencies
+simple-agent/
+├── README.md               # this file — core concepts
+├── docs/
+│   ├── cli.md              # CLI usage guide
+│   └── fullstack.md        # server + frontend guide
+├── pyproject.toml          # uv project config and dependencies
 ├── .env.example            # API key template
 ├── src/
 │   └── agent/
-│       ├── core.py         # Agent factory (create_deep_agent wrapper)
-│       └── cli.py          # Interactive chat REPL (entry point)
+│       ├── core.py         # agent factory (shared by both approaches)
+│       ├── cli.py          # CLI entry point
+│       └── server.py       # FastAPI server entry point
+├── frontend/               # React chat UI
 └── evals/
-    └── test_agent.py       # Barebones pytest evals
+    └── test_agent.py       # pytest evals
 ```

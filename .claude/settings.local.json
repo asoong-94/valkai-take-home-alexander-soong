@@ -18,7 +18,9 @@
       "Bash(git rebase:*)",
       "Bash(uv init:*)",
       "Bash(uv sync:*)",
-      "Bash(uv run python:*)"
+      "Bash(uv run python:*)",
+      "Bash(cd:*)",
+      "Bash(npm run:*)"
     ]
   }
 }

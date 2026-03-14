@@ -9,6 +9,7 @@ dependencies = [
     "langchain-openai",
     "langchain-anthropic",
     "langchain-google-genai",
+    "langgraph>=0.2.54",
     "python-dotenv",
     "fastapi",
     "uvicorn[standard]",

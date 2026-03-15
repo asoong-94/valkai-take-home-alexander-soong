@@ -1,11 +1,20 @@
+import os
+import re
+import uuid
+from pathlib import Path
+
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from agent.core import make_agent
+from agent.strategies import REGISTRY, make_strategy
+from agent.strategies.base import MemoryStrategy
 
 load_dotenv()
+
+_MODEL = os.getenv("MODEL", "anthropic:claude-haiku-4-5-20251001")
+_DATA_DIR = os.getenv("DATA_DIR", "./data")
 
 app = FastAPI()
 
@@ -16,25 +25,73 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize agent once at startup with default model
-agent = make_agent()
+_strategies: dict[str, MemoryStrategy] = {}
 
 
-class Message(BaseModel):
-    role: str
-    content: str
+def _get_strategy(name: str) -> MemoryStrategy:
+    if name not in _strategies:
+        _strategies[name] = make_strategy(name, _MODEL, data_dir=_DATA_DIR)
+    return _strategies[name]
 
 
 class ChatRequest(BaseModel):
-    messages: list[Message]
+    message: str
+    memory: str = "baseline"
+    user_id: str = "default-user"
+    thread_id: str | None = None
+
+
+class ChatResponse(BaseModel):
+    reply: str
+    thread_id: str
 
 
 @app.post("/chat")
-def chat(req: ChatRequest):
-    messages = [{"role": m.role, "content": m.content} for m in req.messages]
-    result = agent.invoke({"messages": messages})
-    ai_msg = result["messages"][-1]
-    return {"reply": ai_msg.content}
+def chat(req: ChatRequest) -> ChatResponse:
+    thread_id = req.thread_id or uuid.uuid4().hex[:12]
+    strategy = _get_strategy(req.memory)
+    reply = strategy.chat(req.message, user_id=req.user_id, thread_id=thread_id)
+    return ChatResponse(reply=reply, thread_id=thread_id)
+
+
+@app.get("/strategies")
+def list_strategies():
+    return {"strategies": list(REGISTRY.keys())}
+
+
+@app.get("/users")
+def list_users():
+    """Discover user IDs from stored profile files and chroma collections."""
+    user_ids: set[str] = set()
+
+    profiles_dir = Path(_DATA_DIR) / "profiles"
+    if profiles_dir.exists():
+        for f in profiles_dir.glob("*.json"):
+            user_ids.add(f.stem)
+
+    chroma_dir = Path(_DATA_DIR) / "chroma"
+    if chroma_dir.exists():
+        import chromadb
+
+        try:
+            client = chromadb.PersistentClient(path=str(chroma_dir))
+            for col in client.list_collections():
+                name = col.name if hasattr(col, "name") else str(col)
+                if name.startswith("user_"):
+                    user_ids.add(name[5:])
+        except Exception:
+            pass
+
+    return {"users": sorted(user_ids)}
+
+
+@app.get("/inspect")
+def inspect_memory(
+    memory: str = Query(..., description="Strategy name"),
+    user_id: str = Query("default-user", description="User ID"),
+):
+    strategy = _get_strategy(memory)
+    return strategy.inspect(user_id)
 
 
 def main():

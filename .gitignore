@@ -17,6 +17,9 @@ build/
 # OS
 .DS_Store
 
+# Data (memory persistence)
+data/
+
 # uv
 uv.lock
 

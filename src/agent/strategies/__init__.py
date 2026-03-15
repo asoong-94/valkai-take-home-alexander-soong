@@ -1,8 +1,10 @@
 from agent.strategies.base import MemoryStrategy
 from agent.strategies.baseline import Baseline
+from agent.strategies.semantic import SemanticMemory
 
 REGISTRY: dict[str, type[MemoryStrategy]] = {
     "baseline": Baseline,
+    "semantic": SemanticMemory,
 }
 
 

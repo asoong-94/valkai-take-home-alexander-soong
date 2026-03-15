@@ -10,6 +10,8 @@ dependencies = [
     "langchain-anthropic",
     "langchain-google-genai",
     "langgraph>=0.2.54",
+    "sentence-transformers",
+    "chromadb",
     "python-dotenv",
     "fastapi",
     "uvicorn[standard]",

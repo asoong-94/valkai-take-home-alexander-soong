@@ -1,6 +1,6 @@
 # Memory Strategy Agent
 
-A conversational LLM agent that implements and compares three cross-session memory strategies: **baseline** (no memory), **semantic** (vector-based), and **structured** (fixed-schema profiles). Built on LangChain, LangGraph, ChromaDB, and sentence-transformers.
+A conversational LLM agent that implements and compares four cross-session memory strategies: **baseline** (no memory), **semantic** (vector-based), **structured** (fixed-schema profiles), and **hybrid** (both stores with source-of-truth prompting). Built on LangChain, LangGraph, ChromaDB, and sentence-transformers.
 
 - [CLI guide](docs/cli.md) — interactive terminal chat with memory
 - [Fullstack guide](docs/fullstack.md) — FastAPI server + React frontend
@@ -29,6 +29,9 @@ uv run chat --memory semantic --user-id alex
 
 # Structured memory (fixed-schema JSON profile)
 uv run chat --memory structured --user-id alex
+
+# Hybrid memory (profile as source of truth + vector store for context)
+uv run chat --memory hybrid --user-id alex
 ```
 
 ### Run the evaluation harness
@@ -37,7 +40,7 @@ uv run chat --memory structured --user-id alex
 uv run harness
 ```
 
-Runs 5 scripted scenarios against all 3 strategies and prints a side-by-side comparison matrix. Takes ~90s (makes real LLM calls). See [Approach & findings](docs/approach.md) for detailed results.
+Runs 6 scripted scenarios against all 4 strategies and prints a side-by-side comparison matrix. Takes ~4 min (makes real LLM calls). See [Approach & findings](docs/approach.md) for detailed results.
 
 ### Run the fullstack app
 
@@ -62,8 +65,9 @@ Open `http://localhost:3000`. Use the strategy picker and user dropdown to switc
 | Strategy | Storage | Cross-session? | Write policy | Read policy |
 |---|---|---|---|---|
 | **Baseline** | In-process dict | No | Append to thread | Full thread history |
-| **Semantic** | ChromaDB vectors | Yes | Extract facts → embed → append | Top-3 similarity search |
+| **Semantic** | ChromaDB vectors | Yes | Extract facts → embed → append | Top-k similarity search |
 | **Structured** | JSON files on disk | Yes | Extract profile → merge → overwrite | Load full profile |
+| **Hybrid** | JSON profile + ChromaDB | Yes | Profile overwrites + facts append | Profile (source of truth) + top-k facts |
 
 ### Suggested conversations to try
 
@@ -101,6 +105,24 @@ You: My favorite movie is Interstellar.
 You: What's my favorite movie?      # ✗ not in the profile schema
 ```
 
+**Hybrid** — best of both worlds, profile is source of truth + vector store for everything else:
+
+```
+uv run chat --memory hybrid --user-id demo
+You: I grew up in Chicago and went to college in Boston.
+You: I moved to San Francisco after graduating.
+You: I spent two years in Seattle, then a year in Austin.
+You: My favorite food is ramen.
+# quit and restart
+uv run chat --memory hybrid --user-id demo
+You: I just moved to New York.
+# quit and restart
+uv run chat --memory hybrid --user-id demo
+You: Where do I currently live?     # ✓ New York (from profile, no hedging)
+You: Where have I lived before?     # ✓ Chicago, Boston, SF, Seattle, Austin (from vector store)
+You: What's my favorite food?       # ✓ ramen (from vector store, not in profile schema)
+```
+
 ---
 
 ## Project structure
@@ -123,6 +145,7 @@ You: What's my favorite movie?      # ✗ not in the profile schema
 │       ├── baseline.py     # No cross-session memory
 │       ├── semantic.py     # ChromaDB + sentence-transformers
 │       ├── structured.py   # JSON profile with fixed schema
+│       ├── hybrid.py       # Both stores + source-of-truth prompting
 │       ├── nodes.py        # LangGraph node name enum
 │       └── __init__.py     # Registry + factory
 ├── evals/

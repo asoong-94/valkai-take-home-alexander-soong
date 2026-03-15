@@ -119,7 +119,7 @@ class HybridMemory(MemoryStrategy):
         last_msg = state["messages"][-1].content
         results = col.query(
             query_texts=[last_msg],
-            n_results=min(5, col.count()),
+            n_results=min(10, col.count()),
         )
         docs = results["documents"][0] if results["documents"] else []
         return {"recalled": docs}
@@ -139,11 +139,18 @@ class HybridMemory(MemoryStrategy):
             else:
                 profile_lines.append(f"{label}: {val}")
         if profile_lines:
-            parts.append("User profile (authoritative — treat as current truth):\n" + "\n".join(profile_lines))
+            parts.append(
+                "User profile (authoritative current state — these are the latest values):\n"
+                + "\n".join(profile_lines)
+            )
 
         if state["recalled"]:
             memory_text = "\n".join(f"- {fact}" for fact in state["recalled"])
-            parts.append("Additional recalled context (may include historical info):\n" + memory_text)
+            parts.append(
+                "Recalled facts (supplementary — includes historical info, personal details, "
+                "and context the profile doesn't cover; use these to answer questions about "
+                "the user's past, preferences, and interests):\n" + memory_text
+            )
 
         if parts:
             messages.insert(0, SystemMessage(content="\n\n".join(parts)))

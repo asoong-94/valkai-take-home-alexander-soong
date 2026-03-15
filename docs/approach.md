@@ -28,8 +28,10 @@ A registry maps strategy names to classes, and a `make_strategy()` factory handl
 
 ```python
 REGISTRY = {
-    "baseline": Baseline, "semantic": SemanticMemory,
-    "structured": StructuredMemory, "hybrid": HybridMemory,
+    "baseline": Baseline,
+    "semantic": SemanticMemory,
+    "structured": StructuredMemory,
+    "hybrid": HybridMemory,
 }
 strategy = make_strategy("hybrid", "anthropic:claude-haiku-4-5-20251001", data_dir="./data")
 ```

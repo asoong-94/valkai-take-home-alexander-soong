@@ -14,3 +14,20 @@ class MemoryExtraction(BaseModel):
         "Include only: name, role, preferences, projects, interests. "
         "Return an empty list if nothing is worth storing.",
     )
+
+
+class UserProfile(BaseModel):
+    """Fixed-schema profile extracted from conversations by structured memory.
+
+    Deliberately omits catch-all fields like ``interests`` or ``facts`` —
+    this forces schema blindness for information that doesn't fit the
+    predefined fields, which is the key trade-off structured memory demonstrates.
+    """
+
+    name: str | None = None
+    role: str | None = None
+    company: str | None = None
+    location: str | None = None
+    response_style: str | None = None
+    projects: list[str] = Field(default_factory=list)
+    preferred_language: str | None = None

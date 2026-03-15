@@ -1,9 +1,9 @@
 import argparse
-import sys
+import uuid
 
 from dotenv import load_dotenv
 
-from agent.core import make_agent
+from agent.strategies import REGISTRY, make_strategy
 
 
 def main():
@@ -16,16 +16,29 @@ def main():
         help="Model string, e.g. openai:gpt-4o, anthropic:claude-haiku-4-5-20251001, google_genai:gemini-2.5-flash",
     )
     parser.add_argument(
-        "--system",
-        default=None,
-        help="Custom system prompt",
+        "--memory",
+        choices=list(REGISTRY),
+        default="baseline",
+        help="Memory strategy (default: baseline)",
+    )
+    parser.add_argument(
+        "--user-id",
+        default="default-user",
+        help="User ID for cross-session memory (default: default-user)",
+    )
+    parser.add_argument(
+        "--data-dir",
+        default="./data",
+        help="Directory for persistent memory storage (default: ./data)",
     )
     args = parser.parse_args()
 
-    agent = make_agent(args.model, args.system)
-    messages = []
+    strategy = make_strategy(args.memory, args.model, data_dir=args.data_dir)
+    thread_id = uuid.uuid4().hex[:12]
 
-    print("Chat started. Type 'quit' to exit.\n")
+    print(f"Strategy: {strategy.name} | Model: {args.model}")
+    print(f"User: {args.user_id} | Thread: {thread_id}")
+    print("Type 'quit' to exit.\n")
 
     while True:
         try:
@@ -39,11 +52,8 @@ def main():
         if user_input.lower() in ("quit", "exit"):
             break
 
-        messages.append({"role": "user", "content": user_input})
-        result = agent.invoke({"messages": messages})
-        ai_msg = result["messages"][-1]
-        print(f"\nAssistant: {ai_msg.content}\n")
-        messages = result["messages"]
+        reply = strategy.chat(user_input, user_id=args.user_id, thread_id=thread_id)
+        print(f"\nAssistant: {reply}\n")
 
 
 if __name__ == "__main__":

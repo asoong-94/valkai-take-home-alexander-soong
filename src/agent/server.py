@@ -67,7 +67,10 @@ def list_users():
     profiles_dir = Path(_DATA_DIR) / "profiles"
     if profiles_dir.exists():
         for f in profiles_dir.glob("*.json"):
-            user_ids.add(f.stem)
+            stem = f.stem
+            if stem.startswith("hybrid_"):
+                stem = stem[7:]
+            user_ids.add(stem)
 
     chroma_dir = Path(_DATA_DIR) / "chroma"
     if chroma_dir.exists():
@@ -77,8 +80,9 @@ def list_users():
             client = chromadb.PersistentClient(path=str(chroma_dir))
             for col in client.list_collections():
                 name = col.name if hasattr(col, "name") else str(col)
-                if name.startswith("user_"):
-                    user_ids.add(name[5:])
+                for prefix in ("user_", "hybrid_"):
+                    if name.startswith(prefix):
+                        user_ids.add(name[len(prefix):])
         except Exception:
             pass
 

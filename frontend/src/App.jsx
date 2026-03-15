@@ -114,7 +114,11 @@ export default function App() {
       const data = await res.json()
       setMemoryType(data.type || strategy)
 
-      if (data.type === 'semantic') {
+      if (data.type === 'hybrid') {
+        const s = data.stored || {}
+        setStructuredProfile(s.profile || {})
+        setSemanticItems(s.facts || [])
+      } else if (data.type === 'semantic') {
         setSemanticItems(data.stored || [])
         setStructuredProfile({})
       } else if (data.type === 'structured') {
@@ -169,41 +173,28 @@ export default function App() {
     }
   }
 
-  function renderMemoryPanel() {
-    if (strategy === 'baseline') {
-      return <div style={styles.memoryEmpty}>Baseline stores nothing cross-session</div>
-    }
-
-    if (strategy === 'structured' || memoryType === 'structured') {
-      const hasAny = PROFILE_FIELDS.some(f => {
-        const v = structuredProfile[f.key]
-        return v && (!Array.isArray(v) || v.length > 0)
-      })
-      return (
-        <div style={styles.profileTable}>
-          {PROFILE_FIELDS.map(f => {
-            const val = structuredProfile[f.key]
-            const isEmpty = !val || (Array.isArray(val) && val.length === 0)
-            const display = Array.isArray(val) ? val.join(', ') : val
-            return (
-              <div key={f.key} style={styles.profileRow}>
-                <div style={styles.profileLabel}>{f.label}</div>
-                <div style={isEmpty ? styles.profileValueEmpty : styles.profileValue}>
-                  {isEmpty ? '—' : display}
-                </div>
+  function renderProfileTable() {
+    return (
+      <div style={styles.profileTable}>
+        {PROFILE_FIELDS.map(f => {
+          const val = structuredProfile[f.key]
+          const isEmpty = !val || (Array.isArray(val) && val.length === 0)
+          const display = Array.isArray(val) ? val.join(', ') : val
+          return (
+            <div key={f.key} style={styles.profileRow}>
+              <div style={styles.profileLabel}>{f.label}</div>
+              <div style={isEmpty ? styles.profileValueEmpty : styles.profileValue}>
+                {isEmpty ? '—' : display}
               </div>
-            )
-          })}
-          {!hasAny && (
-            <div style={styles.memoryEmpty}>No profile data yet</div>
-          )}
-        </div>
-      )
-    }
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
 
-    if (semanticItems.length === 0) {
-      return <div style={styles.memoryEmpty}>No memories yet</div>
-    }
+  function renderFactsList() {
+    if (semanticItems.length === 0) return null
     return (
       <>
         {semanticItems.map((item, i) => (
@@ -214,7 +205,57 @@ export default function App() {
     )
   }
 
+  function renderMemoryPanel() {
+    if (strategy === 'baseline') {
+      return <div style={styles.memoryEmpty}>Baseline stores nothing cross-session</div>
+    }
+
+    if (strategy === 'hybrid' || memoryType === 'hybrid') {
+      const hasProfile = PROFILE_FIELDS.some(f => {
+        const v = structuredProfile[f.key]
+        return v && (!Array.isArray(v) || v.length > 0)
+      })
+      const hasFacts = semanticItems.length > 0
+      if (!hasProfile && !hasFacts) {
+        return <div style={styles.memoryEmpty}>No memories yet</div>
+      }
+      return (
+        <>
+          <div style={styles.sectionLabel}>Profile</div>
+          {renderProfileTable()}
+          <div style={{ ...styles.sectionLabel, marginTop: 12 }}>Recalled Facts</div>
+          {hasFacts ? renderFactsList() : <div style={styles.memoryEmpty}>No facts yet</div>}
+        </>
+      )
+    }
+
+    if (strategy === 'structured' || memoryType === 'structured') {
+      const hasAny = PROFILE_FIELDS.some(f => {
+        const v = structuredProfile[f.key]
+        return v && (!Array.isArray(v) || v.length > 0)
+      })
+      return (
+        <>
+          {renderProfileTable()}
+          {!hasAny && <div style={styles.memoryEmpty}>No profile data yet</div>}
+        </>
+      )
+    }
+
+    if (semanticItems.length === 0) {
+      return <div style={styles.memoryEmpty}>No memories yet</div>
+    }
+    return renderFactsList()
+  }
+
   function memoryCount() {
+    if (strategy === 'hybrid' || memoryType === 'hybrid') {
+      const profileCount = PROFILE_FIELDS.filter(f => {
+        const v = structuredProfile[f.key]
+        return v && (!Array.isArray(v) || v.length > 0)
+      }).length
+      return profileCount + semanticItems.length
+    }
     if (strategy === 'structured' || memoryType === 'structured') {
       return PROFILE_FIELDS.filter(f => {
         const v = structuredProfile[f.key]
@@ -290,7 +331,7 @@ export default function App() {
             {renderMemoryPanel()}
           </div>
           <div style={styles.memoryFooter}>
-            {memoryCount()} {strategy === 'structured' ? 'field' : 'item'}{memoryCount() !== 1 ? 's' : ''} stored
+            {memoryCount()} {(strategy === 'structured' || strategy === 'hybrid') ? 'field' : 'item'}{memoryCount() !== 1 ? 's' : ''} stored
           </div>
         </div>
 
@@ -452,6 +493,15 @@ const styles = {
     fontSize: 11,
     textAlign: 'center',
     padding: '40px 12px',
+  },
+  sectionLabel: {
+    fontSize: 10,
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    color: '#888',
+    padding: '6px 10px 2px',
+    borderBottom: '1px solid #eee',
   },
   memoryItem: {
     padding: '5px 10px',

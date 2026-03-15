@@ -167,6 +167,34 @@ SCENARIOS = [
             ),
         ],
     ),
+    Scenario(
+        name="Location History",
+        description="Many past locations + current — can the strategy tell me where I live AND where I've lived?",
+        plant_messages=[
+            "I grew up in Chicago and lived there until I was 18.",
+            "I went to college at MIT in Boston for 4 years.",
+            "After graduating I moved to San Francisco to work at a startup.",
+            "I spent two years in Seattle working at Amazon.",
+            "Then I did a stint in Austin for about a year.",
+            "I moved to Denver for a while to be closer to the mountains.",
+        ],
+        update_messages=[
+            "I just moved to New York City for a new job.",
+        ],
+        queries=[
+            RecallQuery(
+                question="Where do I currently live?",
+                keywords=["new york"],
+                min_keyword_matches=1,
+                reject_keywords=["conflicting", "contradiction", "unclear"],
+            ),
+            RecallQuery(
+                question="Where have I lived in the past? List all the cities.",
+                keywords=["chicago", "boston", "san francisco", "seattle", "austin", "denver"],
+                min_keyword_matches=4,
+            ),
+        ],
+    ),
 ]
 
 

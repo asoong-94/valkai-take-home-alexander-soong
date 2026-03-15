@@ -1,5 +1,6 @@
 from agent.strategies.base import MemoryStrategy
 from agent.strategies.baseline import Baseline
+from agent.strategies.hybrid import HybridMemory
 from agent.strategies.semantic import SemanticMemory
 from agent.strategies.structured import StructuredMemory
 
@@ -7,6 +8,7 @@ REGISTRY: dict[str, type[MemoryStrategy]] = {
     "baseline": Baseline,
     "semantic": SemanticMemory,
     "structured": StructuredMemory,
+    "hybrid": HybridMemory,
 }
 
 
